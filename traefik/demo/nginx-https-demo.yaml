@@ -1,0 +1,58 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx-443
+  name: nginx-443
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-443
+  template:
+    metadata:
+      labels:
+        app: nginx-443
+    spec:
+      containers:
+      - image: nginx:1.14.2
+        imagePullPolicy: IfNotPresent
+        name: nginx-443
+        ports:
+        - name: nginx-443
+          containerPort: 80
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-443
+  namespace: default
+spec:
+  selector:
+    app: nginx-443
+  ports:
+  - name: web
+    port: 80
+    targetPort: nginx-443
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: nginx-443route
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: traefik-v2.3
+spec:
+  entryPoints:
+    - websecure # 跟ConfigMap中的保持一致
+  routes:
+  - match: Host(`nginx-443.k8stest.com`) && PathPrefix(`/`)
+    kind: Rule
+    services:
+    - name: nginx-443
+      port: 80
+  tls:
+    secretName: nginx-443
